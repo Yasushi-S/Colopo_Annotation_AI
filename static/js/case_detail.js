@@ -83,6 +83,8 @@
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(previewImage, 0, 0);
 
+    const scale = Math.max(1, canvas.width / 1000);
+
     annotations.forEach(function (ann) {
       const { cx, cy, r } = annToPixel(ann);
       const color = getColor(ann);
@@ -94,18 +96,18 @@
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.strokeStyle = color;
-      ctx.lineWidth = isSelected ? 4 : 2;
+      ctx.lineWidth = (isSelected ? 4 : 2) * scale;
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 4 * scale, 0, Math.PI * 2);
       ctx.fillStyle = color;
       ctx.fill();
 
       if (ann.rank) {
         ctx.fillStyle = color;
-        ctx.font = "bold 14px sans-serif";
-        ctx.fillText(String(ann.rank), cx - 4, cy - r - 6);
+        ctx.font = "bold " + (14 * scale) + "px sans-serif";
+        ctx.fillText(String(ann.rank), cx - 4 * scale, cy - r - 6 * scale);
       }
 
       ctx.restore();
@@ -118,6 +120,7 @@
       img.onload = function () {
         canvas.width = img.naturalWidth;
         canvas.height = img.naturalHeight;
+        canvas.style.aspectRatio = img.naturalWidth + " / " + img.naturalHeight;
         previewImage = img;
         drawCanvas();
         resolve();

@@ -40,3 +40,26 @@
 - フェーズ5レビュー指摘事項対応のため、Claude Codeがユーザー承認の上で直接修正
 - AI解析エラー時の `app.logger.error(...)` など既存ログ出力への影響なし
 ---
+
+---
+## [2026-06-10] 実行 #3 ── 修正指示 #2（候補点キャンバスの表示不具合修正）への対応
+
+### 対応した指示
+- modification_instructions.md の #2
+
+### 実施内容詳細
+- `static/js/case_detail.js` の `loadImage()` の `img.onload` 内に
+  `canvas.style.aspectRatio = img.naturalWidth + " / " + img.naturalHeight;` を追加し、
+  canvas表示boxのアスペクト比を元画像に一致させ、横方向の引き伸ばしを解消した
+- `drawCanvas()` 内に `const scale = Math.max(1, canvas.width / 1000);` を追加し、
+  円の線幅・中心点の半径・rank番号のフォントサイズ/描画位置にこの係数を乗算するよう変更
+  （`ctx.lineWidth`、`ctx.arc(cx, cy, 4 * scale, ...)`、`"bold " + (14 * scale) + "px sans-serif"`、`cx - 4 * scale`、`cy - r - 6 * scale`）
+  し、元画像の解像度が大きい場合でも円・中心点・rank番号が視認できるようにした
+
+### 確認事項・備考
+- `doctor_confirmed = 0`（未採用）の点を半透明表示する既存仕様（`alpha = 0.4`）は変更なし
+- `canvasCoords()`/`hitTest()` 等の座標計算ロジックは変更なし（`getBoundingClientRect()`基準の比率計算のため、表示boxのアスペクト比修正後も動作する想定）
+- ブラウザのキャッシュにより変更が反映されない場合は、ハード再読み込み（Ctrl+Shift+R）が必要
+- フェーズ5レビュー指摘事項対応のため、Claude Codeがユーザー承認の上で直接修正
+- 解像度の異なる複数症例画像での実機確認はユーザー側で実施を推奨
+---
