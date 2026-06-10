@@ -1,0 +1,33 @@
+# Cursor ルール（colpo_annotation_ai）
+
+## 基本方針
+- CURSOR_INSTRUCTIONS.md（初回実装）/ modification_instructions.md（以降の修正）の指示に従い、忠実にコーディングを行う
+- DB スキーマ・既存データへの変更を伴う場合は、必ず作業前にユーザーに確認を取る
+- コーディング完了後、modification_log.md の末尾に実施内容を追記する（新規ファイル作成禁止）
+- 修正対象ファイルを必ず読んでから変更する（読まずに変更禁止）
+- 指示書に記載のない変更（リファクタリング・コメント追加等）は行わない
+- SQL クエリはパラメータバインディングを使用（f-string での SQL 組み立て禁止）
+- シークレットキー・API キーをコードにハードコードしない（必ず .env から読み込む）
+- Claude Code のレビューが完了するまで git commit しない
+
+## 実行記録フォーマット（modification_log.md）
+---
+## [YYYY-MM-DD] 実行 #N ── <一行要約>
+
+### 対応した指示
+- （CURSOR_INSTRUCTIONS.md または modification_instructions.md の #N）
+
+### 実施内容詳細
+（実際に行った変更を箇条書きで記載）
+
+### 確認事項・備考
+（問題があれば記載、なければ「なし」）
+---
+
+## メインファイル
+- app.py（Flask アプリ本体）
+
+## ドキュメント
+- CURSOR_INSTRUCTIONS.md（新規開発発注書）
+- modification_instructions.md（修正指示）
+- modification_log.md（実行記録）

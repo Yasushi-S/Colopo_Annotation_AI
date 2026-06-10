@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}{{ case.case_id }} — Colpo Annotation AI{% endblock %}
+
+{% block content %}
+<div class="mb-4 flex items-center justify-between">
+  <div>
+    <a href="{{ url_for('case_list') }}" class="text-sm text-teal-600 hover:text-teal-800">← 症例一覧</a>
+    <h1 class="text-2xl font-bold text-slate-800 mt-1">{{ case.case_id }}</h1>
+    <p class="text-sm text-slate-500">
+      検査日: {{ case.exam_date }} /
+      {{ case.image_type_label }} /
+      <span class="status-badge status-{{ case.status }}" id="case-status-badge">{{ case.status_label }}</span>
+    </p>
+  </div>
+</div>
+
+<div id="error-banner" class="hidden mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm"></div>
+
+<div class="flex flex-col lg:flex-row gap-4">
+  <!-- 左ペイン: 画像 + Canvas -->
+  <div class="w-full lg:w-1/2">
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="flex flex-wrap items-center gap-2 mb-3">
+        <select id="provider-select"
+                class="border rounded-lg px-3 py-1.5 text-sm provider-dummy">
+          <option value="openai">GPT-4o</option>
+          <option value="anthropic">Claude</option>
+          <option value="dummy">Demo (ダミー)</option>
+        </select>
+        <button id="btn-analyze"
+                class="px-4 py-1.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-sm font-medium">
+          AI解析実行
+        </button>
+        <button id="btn-add-mode"
+                class="px-4 py-1.5 border rounded-lg hover:bg-slate-50 text-sm font-medium">
+          点を追加
+        </button>
+      </div>
+
+      <div class="relative">
+        <canvas id="annotation-canvas" class="w-full border rounded-lg bg-slate-900"
+                style="max-height: 480px;"></canvas>
+        <div id="loading-overlay"
+             class="absolute inset-0 bg-black/50 items-center justify-center rounded-lg">
+          <span class="text-white font-medium">AI解析中...</span>
+        </div>
+      </div>
+
+      <p id="overall-comment" class="mt-2 text-sm text-slate-500 hidden"></p>
+    </div>
+  </div>
+
+  <!-- 右ペイン: 候補点リスト + 症例情報 -->
+  <div class="w-full lg:w-1/2 space-y-4">
+    <div class="bg-white rounded-lg shadow p-4">
+      <h2 class="text-lg font-semibold mb-3">候補点リスト</h2>
+      <div id="annotation-list" class="space-y-3 max-h-[50vh] overflow-y-auto">
+        <p id="no-annotations" class="text-sm text-slate-500 {% if annotations %}hidden{% endif %}">
+          候補点がありません。「AI解析実行」または「点を追加」で候補点を作成してください。
+        </p>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-4">
+      <h2 class="text-lg font-semibold mb-3">症例情報</h2>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-sm font-medium mb-1">細胞診結果</label>
+          <input type="text" id="cytology_result" value="{{ case.cytology_result or '' }}"
+                 class="w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">HPV結果</label>
+          <input type="text" id="hpv_result" value="{{ case.hpv_result or '' }}"
+                 class="w-full border rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">メモ</label>
+          <textarea id="memo" rows="2" class="w-full border rounded-lg px-3 py-2 text-sm">{{ case.memo or '' }}</textarea>
+        </div>
+        <button id="btn-save-meta"
+                class="px-4 py-1.5 border rounded-lg hover:bg-slate-50 text-sm">
+          症例情報を保存
+        </button>
+      </div>
+    </div>
+
+    <button id="btn-approve"
+            class="w-full px-6 py-3 bg-teal-700 text-white rounded-lg hover:bg-teal-800 font-semibold text-lg">
+      承認して保存
+    </button>
+  </div>
+</div>
+
+<script>
+  window.CASE_DATA = {
+    caseId: {{ case.case_id | tojson }},
+    imageUrl: {{ ('/' + case.original_image_path) | tojson }},
+    imageWidth: {{ case.image_width }},
+    imageHeight: {{ case.image_height }},
+    status: {{ case.status | tojson }},
+    annotations: {{ annotations | tojson }},
+    labelOptions: {{ label_options | tojson }},
+    findingOptions: {{ finding_options | tojson }},
+    findingLabels: {{ finding_labels | tojson }},
+  };
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/case_detail.js') }}"></script>
+{% endblock %}

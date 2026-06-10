@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}新規症例登録 — Colpo Annotation AI{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <h1 class="text-2xl font-bold text-slate-800 mb-6">新規症例登録</h1>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  {% for category, message in messages %}
+  <div class="mb-4 p-3 rounded-lg text-sm {% if category == 'error' %}bg-red-50 border border-red-200 text-red-700{% else %}bg-teal-50 border border-teal-200 text-teal-700{% endif %}">
+    {{ message }}
+  </div>
+  {% endfor %}
+  {% endif %}
+  {% endwith %}
+
+  <form id="case-form" action="{{ url_for('case_create') }}" method="POST"
+        enctype="multipart/form-data" class="bg-white rounded-lg shadow p-6 space-y-4">
+
+    <div>
+      <label class="block text-sm font-medium mb-1" for="image">画像ファイル <span class="text-red-500">*</span></label>
+      <input type="file" id="image" name="image" accept=".png,.jpg,.jpeg" required
+             class="w-full border rounded-lg px-3 py-2">
+      <p class="text-xs text-slate-500 mt-1">PNG / JPG（最大16MB）</p>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1" for="patient_id">患者ID（匿名化ID） <span class="text-red-500">*</span></label>
+      <input type="text" id="patient_id" name="patient_id" required
+             class="w-full border rounded-lg px-3 py-2" placeholder="例: ANON_001">
+      <p class="text-xs text-slate-500 mt-1">実名・カルテ番号は入力しないでください</p>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1" for="exam_date">検査日 <span class="text-red-500">*</span></label>
+      <input type="date" id="exam_date" name="exam_date" value="{{ today }}" required
+             class="w-full border rounded-lg px-3 py-2">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1" for="image_type">画像種別</label>
+      <select id="image_type" name="image_type" class="w-full border rounded-lg px-3 py-2">
+        {% for key, label in image_types.items() %}
+        <option value="{{ key }}" {% if key == 'acetowhite' %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1" for="cytology_result">細胞診結果</label>
+      <input type="text" id="cytology_result" name="cytology_result"
+             class="w-full border rounded-lg px-3 py-2">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1" for="hpv_result">HPV結果</label>
+      <input type="text" id="hpv_result" name="hpv_result"
+             class="w-full border rounded-lg px-3 py-2">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1" for="memo">メモ</label>
+      <textarea id="memo" name="memo" rows="3"
+                class="w-full border rounded-lg px-3 py-2"></textarea>
+    </div>
+
+    <div id="form-error" class="hidden text-red-600 text-sm"></div>
+
+    <div class="flex gap-3 pt-2">
+      <button type="submit"
+              class="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium">
+        保存して解析へ
+      </button>
+      <a href="{{ url_for('case_list') }}"
+         class="px-6 py-2 border rounded-lg hover:bg-slate-50">キャンセル</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/case_new.js') }}"></script>
+{% endblock %}

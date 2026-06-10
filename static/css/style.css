@@ -1,0 +1,67 @@
+/* Colpo Annotation AI — 追加スタイル */
+
+#annotation-canvas {
+  max-height: min(70vh, 640px);
+  cursor: crosshair;
+}
+
+#annotation-canvas.mode-move {
+  cursor: grab;
+}
+
+#annotation-canvas.mode-move:active {
+  cursor: grabbing;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-uploaded {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.status-ai_analyzed {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-approved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.rank-badge-1 { background: #ef4444; color: white; }
+.rank-badge-2 { background: #eab308; color: white; }
+.rank-badge-3 { background: #3b82f6; color: white; }
+.rank-badge-manual { background: #94a3b8; color: white; }
+
+.annotation-card {
+  border: 2px solid transparent;
+  transition: border-color 0.15s;
+}
+
+.annotation-card.selected {
+  border-color: #0d9488;
+}
+
+.annotation-card.unconfirmed {
+  opacity: 0.6;
+}
+
+.provider-openai { border-color: #10b981; }
+.provider-anthropic { border-color: #8b5cf6; }
+.provider-dummy { border-color: #64748b; }
+
+#loading-overlay {
+  display: none;
+}
+
+#loading-overlay.active {
+  display: flex;
+}
