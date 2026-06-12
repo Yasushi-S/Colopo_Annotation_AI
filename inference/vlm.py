@@ -3,9 +3,10 @@ import io
 import json
 import logging
 import os
+import re
 from typing import Any
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 from inference.base import AbstractAnnotationInference
 from inference.prompts import ANALYSIS_PROMPT, SYSTEM_PROMPT
@@ -20,6 +21,62 @@ _VALID_LABELS = {
     "inflammation_like",
     "metaplasia_like",
 }
+
+GRID_COLS = 4
+GRID_ROWS = 3
+_ROW_LABELS = "ABC"
+_GRID_CELL_RE = re.compile(r"^([A-Za-z])([0-9]+)$")
+
+
+def _draw_grid_overlay(image: Image.Image) -> Image.Image:
+    overlay = image.convert("RGB").copy()
+    draw = ImageDraw.Draw(overlay)
+    width, height = overlay.size
+    color = (0, 255, 255)
+    line_width = max(2, min(width, height) // 300)
+    font_size = max(18, min(width, height) // 30)
+    try:
+        font = ImageFont.truetype(r"C:\Windows\Fonts\arial.ttf", font_size)
+    except OSError:
+        font = ImageFont.load_default()
+
+    for c in range(1, GRID_COLS):
+        x = width * c / GRID_COLS
+        draw.line([(x, 0), (x, height)], fill=color, width=line_width)
+    for r in range(1, GRID_ROWS):
+        y = height * r / GRID_ROWS
+        draw.line([(0, y), (width, y)], fill=color, width=line_width)
+
+    for r in range(GRID_ROWS):
+        for c in range(GRID_COLS):
+            label = f"{_ROW_LABELS[r]}{c + 1}"
+            x = width * c / GRID_COLS + line_width + 4
+            y = height * r / GRID_ROWS + line_width + 4
+            draw.text((x, y), label, fill=color, font=font)
+
+    return overlay
+
+
+def _grid_cell_to_ratio(cell: Any) -> tuple[float, float] | None:
+    if not isinstance(cell, str):
+        return None
+    m = _GRID_CELL_RE.match(cell.strip())
+    if not m:
+        return None
+    row = _ROW_LABELS.find(m.group(1).upper())
+    col = int(m.group(2)) - 1
+    if row < 0 or row >= GRID_ROWS or col < 0 or col >= GRID_COLS:
+        return None
+    return (col + 0.5) / GRID_COLS, (row + 0.5) / GRID_ROWS
+
+
+def _format_cervix_note(cells: Any) -> str:
+    if not isinstance(cells, list) or not cells:
+        return ""
+    valid = [str(c).strip() for c in cells if _GRID_CELL_RE.match(str(c).strip())]
+    if not valid:
+        return ""
+    return "（AI推定: 子宮頸部はグリッド " + "・".join(valid) + " 付近）"
 
 
 def _image_to_base64(image: Image.Image) -> str:
@@ -90,11 +147,17 @@ def _dict_to_result(data: dict[str, Any]) -> AnnotationResult:
                 confidence = None
         radius = _clamp_ratio(item.get("radius_ratio", 0.05), 0.05)
         radius = max(0.02, min(0.3, radius))
+        ratio = _grid_cell_to_ratio(item.get("grid_cell"))
+        if ratio is not None:
+            x_ratio, y_ratio = ratio
+        else:
+            x_ratio = _clamp_ratio(item.get("x_ratio", 0.5))
+            y_ratio = _clamp_ratio(item.get("y_ratio", 0.5))
         candidates.append(
             AnnotationCandidate(
                 rank=rank,
-                x_ratio=_clamp_ratio(item.get("x_ratio", 0.5)),
-                y_ratio=_clamp_ratio(item.get("y_ratio", 0.5)),
+                x_ratio=x_ratio,
+                y_ratio=y_ratio,
                 radius_ratio=radius,
                 label=label,
                 findings=findings,
@@ -102,9 +165,14 @@ def _dict_to_result(data: dict[str, Any]) -> AnnotationResult:
                 reason=str(item.get("reason", "")),
             )
         )
+    overall_comment = str(data.get("overall_comment", ""))
+    cervix_note = _format_cervix_note(data.get("cervix_cells"))
+    if cervix_note:
+        logger.info("子宮頸部範囲推定セル: %s", data.get("cervix_cells"))
+        overall_comment = (overall_comment + " " + cervix_note).strip()
     return AnnotationResult(
         candidates=candidates,
-        overall_comment=str(data.get("overall_comment", "")),
+        overall_comment=overall_comment,
     )
 
 
@@ -118,7 +186,7 @@ class OpenAIAnnotationInference(AbstractAnnotationInference):
         self.client = OpenAI(api_key=api_key)
 
     def analyze(self, image: Image.Image) -> AnnotationResult:
-        image_b64 = _image_to_base64(image)
+        image_b64 = _image_to_base64(_draw_grid_overlay(image))
         response = self.client.chat.completions.create(
             model="gpt-4o",
             temperature=0.2,
@@ -152,7 +220,7 @@ class AnthropicAnnotationInference(AbstractAnnotationInference):
         self.client = Anthropic(api_key=api_key)
 
     def analyze(self, image: Image.Image) -> AnnotationResult:
-        image_b64 = _image_to_base64(image)
+        image_b64 = _image_to_base64(_draw_grid_overlay(image))
         response = self.client.messages.create(
             model="claude-opus-4-6",
             system=SYSTEM_PROMPT,

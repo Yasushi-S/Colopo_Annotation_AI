@@ -63,3 +63,60 @@
 - フェーズ5レビュー指摘事項対応のため、Claude Codeがユーザー承認の上で直接修正
 - 解像度の異なる複数症例画像での実機確認はユーザー側で実施を推奨
 ---
+
+---
+## [2026-06-12] 実行 #4 ── 修正指示 #3（候補点キャンバスの横伸び再修正）への対応
+
+### 対応した指示
+- modification_instructions.md の #3
+
+### 実施内容詳細
+- `templates/case_detail.html` の `<canvas id="annotation-canvas">` から `class="w-full"` とインライン `style="max-height: 480px;"` を削除し、`class="border rounded-lg bg-slate-900"` のみに変更
+- `static/css/style.css` の `#annotation-canvas` ルールに `display: block; width: auto; height: auto; max-width: 100%;` を追加し、`max-height: min(70vh, 640px);` と組み合わせて、canvasの内在アスペクト比（`canvas.width`/`canvas.height`）を保ったまま幅・高さ両方の制約内に収まるサイズに自動調整されるよう変更
+- `static/js/case_detail.js` の `canvas.style.aspectRatio` 設定は変更なし（内在アスペクト比と一致するため無害）
+
+### 確認事項・備考
+- `canvasCoords()` は `getBoundingClientRect()` 基準の比率計算のため、表示サイズ変更後も座標計算・ドラッグ編集に影響なし
+- ブラウザのキャッシュにより変更が反映されない場合は、ハード再読み込み（Ctrl+Shift+R）が必要
+- フェーズ5レビュー指摘事項（修正指示 #3）対応のため、Claude Codeがユーザー承認の上で直接修正
+- 縦長・横長・正方形など複数アスペクト比の症例画像での実機確認はユーザー側で実施を推奨
+---
+
+---
+## [2026-06-12] 実行 #5 ── 修正指示 #4（AI解析のグリッド方式による所見位置特定の改善・Stage 1）への対応
+
+### 対応した指示
+- modification_instructions.md の #4
+
+### 実施内容詳細
+- `inference/prompts.py`
+  - `SYSTEM_PROMPT` の「## 座標」を「## グリッドとセル位置」に変更し、4列×3行のグリッド（A1〜C4）の
+    セルラベルで所見位置（`grid_cell`）を回答させる指示に変更
+  - `SYSTEM_PROMPT` に「## 子宮頸部の範囲」セクションを追加し、子宮頸部・腟円蓋の写っている範囲を
+    `cervix_cells`（セルラベルのリスト）として回答させる指示を追加
+  - `ANALYSIS_PROMPT` のJSON出力例を `x_ratio`/`y_ratio` 直接指定から `grid_cell` 方式に変更し、
+    トップレベルに `cervix_cells` を追加
+- `inference/vlm.py`
+  - グリッド定数（`GRID_COLS = 4`, `GRID_ROWS = 3`, `_ROW_LABELS = "ABC"`）を追加
+  - `_draw_grid_overlay()` を追加：画像のコピーにシアン色の4×3グリッド線とセルラベル（A1〜C4）を描画
+  - `_grid_cell_to_ratio()` を追加：`"B2"` 等のセルラベルをセル中心の `(x_ratio, y_ratio)` に変換
+    （不正・範囲外は `None`）
+  - `_format_cervix_note()` を追加：`cervix_cells` を画面表示用テキストに整形（不正・空は空文字）
+  - `_dict_to_result()` を変更：`grid_cell` が変換できればそれを使用し、できない場合は従来の
+    `x_ratio`/`y_ratio` にフォールバック。`cervix_cells` を `logger.info()` でログ出力し、
+    `overall_comment` に推定範囲の注記を追記
+  - `OpenAIAnnotationInference.analyze()` / `AnthropicAnnotationInference.analyze()` の両方で、
+    `_draw_grid_overlay(image)` を適用した画像をAIへ送信するよう変更
+
+### 確認事項・備考
+- `venv` 経由で `_draw_grid_overlay()` の出力画像を生成し、4×3のグリッド線・ラベル（A1〜C4）が
+  正しい位置に描画されることを目視確認（`arial.ttf` 読み込み成功）
+- `_grid_cell_to_ratio()` / `_format_cervix_note()` / `_dict_to_result()` を単体実行し、
+  `grid_cell`変換・大文字小文字混在・範囲外セル・`grid_cell`なし時の`x_ratio`/`y_ratio`フォールバック・
+  `cervix_cells`の`overall_comment`追記が想定どおり動作することを確認
+- `app.py` のインポート・ルート定義に影響がないことを確認
+- `inference/dummy.py`・DBスキーマ・既存の手動追加点・承認済みデータへの変更なし
+- 本機能は実験的（Stage 1）。実症例（特に「中央部」表現と円の位置が一致しなかった事例）で
+  位置精度・子宮頸部範囲推定の精度をユーザー側で確認することを推奨
+- フェーズ5レビュー指摘事項対応のため、Claude Codeがユーザー承認の上で直接修正
+---

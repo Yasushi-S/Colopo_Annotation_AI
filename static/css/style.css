@@ -1,6 +1,10 @@
 /* Colpo Annotation AI — 追加スタイル */
 
 #annotation-canvas {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
   max-height: min(70vh, 640px);
   cursor: crosshair;
 }
